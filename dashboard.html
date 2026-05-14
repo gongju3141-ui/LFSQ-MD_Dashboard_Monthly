@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LFSQ MD 월별 출시 Plan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <!-- Firebase SDK (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <style>
+    :root {
+      --bg: #F7F3EC;
+      --card: #FFFFFF;
+      --accent: #6E9E72;
+      --accent-light: #E4EFE5;
+      --accent-dark: #527857;
+      --text: #242424;
+      --muted: #888;
+      --border: #DDD5C5;
+      --line: #C8BBAA;
+      --danger: #B94040;
+      --bar: #96BA99;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; font-size:14px; }
+
+    /* ── HEADER ── */
+    .hd { background:var(--card); border-bottom:1px solid var(--border); padding:14px 32px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; box-shadow:0 2px 10px rgba(0,0,0,0.06); }
+    .hd-title { font-size:18px; font-weight:700; letter-spacing:-0.5px; }
+    .hd-sub { font-size:11px; color:var(--muted); margin-top:2px; }
+    .hd-actions { display:flex; gap:8px; align-items:center; }
+    .conn-badge { font-size:11px; padding:4px 10px; border-radius:20px; font-weight:600; }
+    .conn-ok  { background:#E4EFE5; color:#527857; }
+    .conn-err { background:#FDEAEA; color:#B94040; }
+    .conn-ing { background:#F0EBE0; color:#888; }
+
+    /* ── BUTTONS ── */
+    .btn { padding:8px 16px; border:1.5px solid transparent; border-radius:7px; font-family:inherit; font-size:13px; font-weight:500; cursor:pointer; transition:all 0.18s; display:inline-flex; align-items:center; gap:5px; }
+    .btn-primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+    .btn-primary:hover { background:var(--accent-dark); border-color:var(--accent-dark); }
+    .btn-ghost { background:transparent; border-color:var(--border); color:var(--text); }
+    .btn-ghost:hover { background:#EDE8E0; }
+    .btn-danger { background:transparent; border-color:var(--danger); color:var(--danger); }
+    .btn-danger:hover { background:var(--danger); color:#fff; }
+    .btn-sm { padding:5px 11px; font-size:12px; }
+    .btn-xs { padding:3px 8px; font-size:11px; border-radius:5px; }
+    label.btn { cursor:pointer; }
+    label.btn input[type="file"] { display:none; }
+
+    /* ── MAIN ── */
+    .main { padding:32px 32px 60px; }
+
+    /* ── YEAR BAR ── */
+    .year-bar { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; }
+    .year-nav { display:flex; align-items:center; gap:10px; }
+    .year-nav button { width:30px; height:30px; border:1.5px solid var(--border); border-radius:50%; background:var(--card); cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+    .year-nav button:hover { background:var(--border); }
+    .year-num { font-size:26px; font-weight:700; letter-spacing:-1px; }
+    .year-range { font-size:12px; color:var(--muted); margin-top:2px; text-align:center; }
+    .year-hint { font-size:12px; color:var(--muted); }
+
+    /* ── SUMMARY ── */
+    .summary { display:flex; background:var(--card); border:1.5px solid var(--border); border-radius:12px; margin-bottom:36px; overflow:hidden; }
+    .sum-item { flex:1; padding:16px 20px; border-right:1px solid var(--border); }
+    .sum-item:last-child { border-right:none; }
+    .sum-label { font-size:14px; color:var(--muted); font-weight:500; }
+    .sum-val { font-size:27px; font-weight:700; margin-top:3px; letter-spacing:-0.5px; }
+
+    /* ── TIMELINE ── */
+    .tl-wrapper { overflow-x:auto; padding-bottom:8px; }
+    .tl-section { min-width:960px; }
+    .bubbles-row { display:flex; gap:6px; align-items:flex-end; padding-top:18px; }
+    .m-col { flex:1; min-width:72px; display:flex; flex-direction:column; align-items:center; }
+
+    .bubble { width:100%; background:var(--card); border:1.5px solid var(--border); border-radius:10px; padding:10px 8px 8px; cursor:pointer; transition:all 0.28s cubic-bezier(0.34,1.4,0.64,1); position:relative; min-height:96px; display:flex; flex-direction:column; align-items:center; user-select:none; }
+    .bubble::after  { content:''; position:absolute; bottom:-9px; left:50%; transform:translateX(-50%); border-left:7px solid transparent; border-right:7px solid transparent; border-top:9px solid var(--card); z-index:2; }
+    .bubble::before { content:''; position:absolute; bottom:-11px; left:50%; transform:translateX(-50%); border-left:8px solid transparent; border-right:8px solid transparent; border-top:11px solid var(--border); z-index:1; }
+    .bubble:hover { border-color:var(--accent); box-shadow:0 4px 18px rgba(110,158,114,0.18); }
+    .bubble.active { border-color:var(--accent); background:var(--accent-light); transform:scale(1.07) translateY(-5px); box-shadow:0 10px 28px rgba(110,158,114,0.22); z-index:10; }
+    .bubble.active::after  { border-top-color:var(--accent-light); }
+    .bubble.active::before { border-top-color:var(--accent); }
+    .bubble.active .b-month { font-size:16px; }
+    .bubble.active .b-count { font-size:24px; }
+    .bubble.active .b-label { font-size:12px; }
+
+    .b-month { font-size:13px; font-weight:700; color:var(--muted); letter-spacing:0.3px; }
+    .b-count { font-size:21px; font-weight:700; color:var(--accent); line-height:1.1; margin-top:3px; }
+    .b-label { font-size:9px; color:var(--muted); margin-top:1px; }
+    .b-thumbs { display:flex; flex-wrap:wrap; gap:2px; margin-top:6px; justify-content:center; }
+    .b-thumb { width:24px; height:24px; border-radius:5px; object-fit:cover; border:1px solid var(--border); }
+    .b-thumb-ph { width:24px; height:24px; border-radius:5px; background:var(--bg); border:1px dashed var(--border); display:flex; align-items:center; justify-content:center; font-size:9px; color:var(--muted); }
+    .b-add { margin-top:6px; width:22px; height:22px; border-radius:50%; border:1.5px dashed var(--border); background:none; cursor:pointer; font-size:13px; color:var(--muted); display:flex; align-items:center; justify-content:center; transition:all 0.18s; }
+    .b-add:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-light); }
+
+    .tl-line-row { position:relative; height:36px; display:flex; align-items:center; margin-top:10px; }
+    .tl-line { position:absolute; left:0; right:0; height:2px; background:var(--line); }
+    .tl-dots { display:flex; position:relative; z-index:2; width:100%; gap:6px; }
+    .tl-dot-col { flex:1; min-width:72px; display:flex; justify-content:center; }
+    .tl-dot { width:11px; height:11px; border-radius:50%; background:var(--card); border:2.5px solid var(--line); transition:all 0.25s; }
+    .tl-dot.has    { background:var(--accent); border-color:var(--accent); }
+    .tl-dot.active { transform:scale(1.4); background:var(--accent); border-color:var(--accent); }
+
+    .chart-row { display:flex; gap:6px; margin-top:10px; }
+    .c-col { flex:1; min-width:72px; display:flex; flex-direction:column; align-items:center; gap:2px; }
+    .c-bars { width:100%; height:50px; display:flex; align-items:flex-end; justify-content:center; }
+    .c-bar { flex:1; max-width:18px; background:var(--bar); border-radius:3px 3px 0 0; transition:background 0.25s; min-height:2px; }
+    .c-bar.active { background:var(--accent); }
+    .c-val { font-size:9px; color:var(--muted); text-align:center; }
+
+    /* ── EXPANDED ── */
+    .exp-section { margin-top:36px; animation:slideIn 0.28s ease; }
+    @keyframes slideIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+    .exp-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+    .exp-title { font-size:17px; font-weight:700; }
+
+    /* ── PRODUCT GRID ── */
+    .prod-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; }
+    .prod-card { background:var(--card); border:1.5px solid var(--border); border-radius:12px; overflow:hidden; transition:all 0.2s; cursor:pointer; }
+    .prod-card:hover { border-color:var(--accent); box-shadow:0 5px 18px rgba(110,158,114,0.18); transform:translateY(-2px); }
+    .prod-img    { width:100%; height:130px; object-fit:cover; }
+    .prod-img-ph { width:100%; height:130px; background:var(--bg); display:flex; align-items:center; justify-content:center; font-size:36px; color:var(--muted); }
+    .prod-body { padding:11px 12px; }
+    .prod-ip   { font-size:10px; font-weight:700; color:var(--accent); letter-spacing:0.4px; }
+    .prod-name { font-size:13px; font-weight:600; margin-top:3px; line-height:1.35; }
+    .prod-stats { display:flex; gap:6px; margin-top:8px; }
+    .prod-stat  { flex:1; background:var(--bg); border-radius:6px; padding:5px 7px; text-align:center; }
+    .ps-lbl { font-size:9px; color:var(--muted); font-weight:500; }
+    .ps-val { font-size:11px; font-weight:700; margin-top:1px; }
+    .prod-remark { font-size:11px; color:var(--muted); margin-top:7px; line-height:1.45; }
+    .prod-actions { display:flex; gap:5px; padding:8px 12px; border-top:1px solid var(--border); background:#FAFAF8; }
+
+    /* ── EMPTY ── */
+    .empty { text-align:center; padding:52px 24px; color:var(--muted); background:var(--card); border:1.5px dashed var(--border); border-radius:12px; }
+    .empty-ico { font-size:44px; margin-bottom:12px; }
+    .empty-txt { font-size:14px; margin-bottom:16px; }
+
+    /* ── MODAL ── */
+    .overlay { position:fixed; inset:0; background:rgba(0,0,0,0.38); z-index:200; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.2s; }
+    .overlay.open { opacity:1; pointer-events:all; }
+    .modal { background:var(--card); border-radius:14px; width:90%; max-width:520px; max-height:92vh; overflow-y:auto; box-shadow:0 24px 64px rgba(0,0,0,0.22); transform:scale(0.96) translateY(8px); transition:transform 0.22s; }
+    .overlay.open .modal { transform:scale(1) translateY(0); }
+    .modal-hd { padding:18px 22px 14px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--card); z-index:5; }
+    .modal-title { font-size:17px; font-weight:700; }
+    .modal-x { width:30px; height:30px; border-radius:50%; border:none; background:var(--bg); cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center; color:var(--muted); }
+    .modal-x:hover { background:var(--border); }
+    .modal-body { padding:22px; }
+    .modal-ft { padding:14px 22px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; position:sticky; bottom:0; background:var(--card); }
+
+    /* ── FORM ── */
+    .fg { margin-bottom:14px; }
+    .fl { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:5px; display:block; }
+    .fc { width:100%; padding:9px 11px; border:1.5px solid var(--border); border-radius:7px; font-family:inherit; font-size:13px; color:var(--text); background:var(--bg); transition:border-color 0.18s; }
+    .fc:focus { outline:none; border-color:var(--accent); background:#fff; }
+    textarea.fc { resize:vertical; min-height:70px; }
+    .frow { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+    .img-area { border:2px dashed var(--border); border-radius:10px; padding:20px; text-align:center; cursor:pointer; transition:all 0.18s; position:relative; min-height:100px; }
+    .img-area:hover { border-color:var(--accent); background:var(--accent-light); }
+    .img-area input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+    .img-area-ico { font-size:28px; color:var(--muted); }
+    .img-area-txt { font-size:12px; color:var(--muted); margin-top:6px; }
+    .img-preview-wrap { position:relative; }
+    .img-preview { width:100%; max-height:150px; object-fit:cover; border-radius:7px; display:none; }
+    .img-remove { position:absolute; top:6px; right:6px; background:rgba(0,0,0,0.5); color:white; border:none; border-radius:50%; width:22px; height:22px; font-size:12px; cursor:pointer; display:none; align-items:center; justify-content:center; }
+    .img-remove.vis { display:flex; }
+
+    /* ── DETAIL ── */
+    .det-img { width:100%; max-height:190px; object-fit:contain; background:var(--bg); border-radius:8px; margin-bottom:18px; }
+    .det-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .det-item { background:var(--bg); border-radius:8px; padding:11px; }
+    .det-lbl  { font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.4px; }
+    .det-val  { font-size:15px; font-weight:700; margin-top:4px; }
+    .det-rem  { background:var(--bg); border-radius:8px; padding:11px; margin-top:10px; }
+    .det-rem-txt { font-size:13px; line-height:1.6; margin-top:6px; }
+
+    /* ── LOADING OVERLAY ── */
+    .saving-toast { position:fixed; bottom:24px; right:24px; background:#333; color:#fff; padding:10px 18px; border-radius:8px; font-size:13px; z-index:300; opacity:0; transition:opacity 0.2s; pointer-events:none; }
+    .saving-toast.show { opacity:1; }
+
+    ::-webkit-scrollbar { width:5px; height:5px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hd">
+  <div>
+    <div class="hd-title">🗓️ LFSQ MD 월별 출시 Plan</div>
+    <div class="hd-sub">제품 출시 현황 및 매출 볼륨 관리</div>
+  </div>
+  <div class="hd-actions">
+    <span class="conn-badge conn-ing" id="connBadge">⏳ 연결 중...</span>
+    <button class="btn btn-ghost" onclick="exportData()">📤 내보내기</button>
+    <label class="btn btn-ghost">📥 가져오기 <input type="file" accept=".json" onchange="importData(event)"></label>
+    <button class="btn btn-primary" onclick="openAddModal(null)">+ 제품 추가</button>
+  </div>
+</header>
+
+<main class="main">
+  <!-- Year Nav -->
+  <div class="year-bar">
+    <div class="year-nav">
+      <button onclick="changeYear(-1)">‹</button>
+      <div style="text-align:center">
+        <div class="year-num" id="yearNum">FY 2026</div>
+        <div class="year-range" id="yearRange">2026. 04 ~ 2027. 03</div>
+      </div>
+      <button onclick="changeYear(1)">›</button>
+    </div>
+    <div class="year-hint">월 버블을 클릭하면 상세 내용이 펼쳐집니다</div>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary">
+    <div class="sum-item"><div class="sum-label">총 사입 건 수</div><div class="sum-val" id="sTot">0</div></div>
+    <div class="sum-item"><div class="sum-label">총 SKU</div><div class="sum-val" id="sSku">0</div></div>
+    <div class="sum-item"><div class="sum-label">총 수량</div><div class="sum-val" id="sQty">0</div></div>
+    <div class="sum-item"><div class="sum-label">총 매출볼륨</div><div class="sum-val" id="sSales">0</div></div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="tl-wrapper">
+    <div class="tl-section" id="tlSection">
+      <div style="text-align:center;padding:60px;color:var(--muted)">⏳ 데이터 불러오는 중...</div>
+    </div>
+  </div>
+
+  <!-- Expanded -->
+  <div id="expSection" style="display:none"></div>
+</main>
+
+<!-- ADD/EDIT MODAL -->
+<div class="overlay" id="fmOverlay" onclick="if(event.target===this)closeFm()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-hd">
+      <div class="modal-title" id="fmTitle">제품 추가</div>
+      <button class="modal-x" onclick="closeFm()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="fmId">
+      <div class="fg">
+        <label class="fl">출시 월</label>
+        <select class="fc" id="fmMonth">
+          <option value="1">4월 (April)</option>
+          <option value="2">5월 (May)</option>
+          <option value="3">6월 (June)</option>
+          <option value="4">7월 (July)</option>
+          <option value="5">8월 (August)</option>
+          <option value="6">9월 (September)</option>
+          <option value="7">10월 (October)</option>
+          <option value="8">11월 (November)</option>
+          <option value="9">12월 (December)</option>
+          <option value="10">1월 — 다음해 (January)</option>
+          <option value="11">2월 — 다음해 (February)</option>
+          <option value="12">3월 — 다음해 (March)</option>
+        </select>
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="fl">IP</label><input class="fc" id="fmIP" placeholder="예: BT21, PEANUTS"></div>
+        <div class="fg"><label class="fl">제품명</label><input class="fc" id="fmName" placeholder="제품명 입력"></div>
+      </div>
+      <div class="fg">
+        <label class="fl">제품 이미지</label>
+        <div class="img-area">
+          <input type="file" accept="image/*" onchange="handleImg(event)" id="imgInput">
+          <div id="imgPh"><div class="img-area-ico">🖼️</div><div class="img-area-txt">클릭하여 이미지 업로드 (JPG · PNG · GIF)</div></div>
+          <div class="img-preview-wrap">
+            <img class="img-preview" id="imgPreview">
+            <button class="img-remove" id="imgRemove" onclick="removeImg(event)">✕</button>
+          </div>
+        </div>
+      </div>
+      <div class="fg"><label class="fl">SKU</label><input class="fc" id="fmSku" type="number" min="0" placeholder="SKU 수 입력"></div>
+      <div class="frow">
+        <div class="fg"><label class="fl">수량</label><input class="fc" id="fmQty" type="number" min="0" placeholder="0"></div>
+        <div class="fg"><label class="fl">공급율 (%)</label><input class="fc" id="fmGonggeup" type="number" min="0" max="100" step="0.1" placeholder="0"></div>
+      </div>
+      <div class="fg"><label class="fl">매출볼륨 — 부가세별도 (원)</label><input class="fc" id="fmSales" type="number" min="0" placeholder="0"></div>
+      <div class="fg"><label class="fl">Remark</label><textarea class="fc" id="fmRemark" placeholder="특이사항 또는 메모를 입력하세요"></textarea></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeFm()">취소</button>
+      <button class="btn btn-primary" onclick="saveProduct()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="overlay" id="dmOverlay" onclick="if(event.target===this)closeDm()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-hd">
+      <div class="modal-title" id="dmTitle">제품 상세</div>
+      <button class="modal-x" onclick="closeDm()">×</button>
+    </div>
+    <div class="modal-body" id="dmBody"></div>
+    <div class="modal-ft">
+      <button class="btn btn-danger btn-sm" id="dmDel">삭제</button>
+      <button class="btn btn-ghost btn-sm" id="dmEdit">수정</button>
+      <button class="btn btn-ghost" onclick="closeDm()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="saving-toast" id="toast"></div>
+
+<script>
+// ── FIREBASE 초기화 ────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyA3H_K5jVM1AMyvhgei318AHhurc2D54F4",
+  authDomain: "gongju-3141bm.firebaseapp.com",
+  projectId: "gongju-3141bm",
+  storageBucket: "gongju-3141bm.firebasestorage.app",
+  messagingSenderId: "580286113116",
+  appId: "1:580286113116:web:bdbd1f36c96e5869820d99"
+};
+firebase.initializeApp(firebaseConfig);
+const fsdb = firebase.firestore();
+
+// ── 상수 & 상태 ────────────────────────────────────
+const MONTHS   = ['4월','5월','6월','7월','8월','9월','10월','11월','12월','1월','2월','3월'];
+const FY_COUNT = 12;
+let year      = 2026;
+let selMonth  = null;
+let imgB64    = null;
+let products  = [];       // 현재 연도 제품 목록
+let unsub     = null;     // Firestore 리스너 해제 함수
+
+// ── 유틸 ──────────────────────────────────────────
+function yd()  { return products; }
+function mp(m) { return products.filter(p => p.month === m); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function fmt(n) {
+  n = Number(n) || 0;
+  if (n >= 1000000000) return (n/1000000000).toFixed(1) + '십억';
+  if (n >= 1000000)    return Math.round(n/1000000) + '백만';
+  if (n >= 10000)      return (n/10000).toFixed(0) + '만';
+  return n.toLocaleString();
+}
+function toast(msg, ms=2000) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), ms);
+}
+function setBadge(state) {
+  const b = document.getElementById('connBadge');
+  if (state==='ok')  { b.textContent='🟢 연결됨';    b.className='conn-badge conn-ok'; }
+  if (state==='err') { b.textContent='🔴 연결 오류'; b.className='conn-badge conn-err'; }
+  if (state==='ing') { b.textContent='⏳ 연결 중...'; b.className='conn-badge conn-ing'; }
+}
+
+// ── FIRESTORE 리스너 ───────────────────────────────
+function startListener() {
+  if (unsub) unsub();
+  setBadge('ing');
+  document.getElementById('tlSection').innerHTML =
+    '<div style="text-align:center;padding:60px;color:var(--muted)">⏳ 데이터 불러오는 중...</div>';
+
+  unsub = fsdb.collection('products')
+    .where('year', '==', year)
+    .onSnapshot(snap => {
+      setBadge('ok');
+      products = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderSummary();
+      renderTimeline();
+      if (selMonth !== null) renderExpanded(selMonth);
+      else document.getElementById('expSection').style.display = 'none';
+    }, err => {
+      setBadge('err');
+      console.error(err);
+      document.getElementById('tlSection').innerHTML =
+        `<div style="text-align:center;padding:60px;color:#B94040">⚠️ 데이터 로드 실패<br><small>${err.message}</small></div>`;
+    });
+}
+
+// ── 렌더링 ────────────────────────────────────────
+function renderSummary() {
+  const ps   = yd();
+  const tsku = ps.reduce((s,p) => s+(Number(p.sku)||0), 0);
+  const tq   = ps.reduce((s,p) => s+(Number(p.qty)||0), 0);
+  const ts   = ps.reduce((s,p) => s+(Number(p.sales)||0), 0);
+  document.getElementById('sTot').textContent   = ps.length;
+  document.getElementById('sSku').textContent   = tsku.toLocaleString();
+  document.getElementById('sQty').textContent   = tq.toLocaleString();
+  document.getElementById('sSales').textContent = fmt(ts) + ' 원';
+}
+
+function renderTimeline() {
+  const mSales = MONTHS.map((_,i) => mp(i+1).reduce((s,p)=>s+(Number(p.sales)||0),0));
+  const maxS   = Math.max(...mSales, 1);
+  let bH='', dH='', cH='';
+
+  for (let i=0; i<FY_COUNT; i++) {
+    const m   = i+1;
+    const ps  = mp(m);
+    const isA = selMonth===m;
+    const hasD= ps.length>0;
+
+    let thumbs='';
+    ps.slice(0,3).forEach(p => {
+      thumbs += p.image
+        ? `<img class="b-thumb" src="${p.image}" alt="">`
+        : `<div class="b-thumb-ph">📦</div>`;
+    });
+    if (ps.length>3) thumbs += `<div class="b-thumb-ph">+${ps.length-3}</div>`;
+
+    bH += `<div class="m-col"><div class="bubble${isA?' active':''}" onclick="toggleMonth(${m})">
+      <div class="b-month">${MONTHS[i]}</div>
+      <div class="b-count">${ps.length}</div>
+      <div class="b-label">${ps.length===0?'제품 없음':'개 제품'}</div>
+      ${thumbs?`<div class="b-thumbs">${thumbs}</div>`:''}
+      <button class="b-add" onclick="event.stopPropagation();openAddModal(${m})">+</button>
+    </div></div>`;
+
+    dH += `<div class="tl-dot-col"><div class="tl-dot${hasD?' has':''}${isA?' active':''}"></div></div>`;
+
+    const bh = mSales[i]>0 ? Math.max((mSales[i]/maxS)*46,3) : 0;
+    cH += `<div class="c-col"><div class="c-bars"><div class="c-bar${isA?' active':''}" style="height:${bh}px"></div></div>
+      <div class="c-val">${mSales[i]>0?fmt(mSales[i]):'—'}</div></div>`;
+  }
+
+  document.getElementById('tlSection').innerHTML = `
+    <div class="bubbles-row">${bH}</div>
+    <div class="tl-line-row"><div class="tl-line"></div><div class="tl-dots">${dH}</div></div>
+    <div class="chart-row">${cH}</div>`;
+}
+
+function renderExpanded(m) {
+  const ps  = mp(m);
+  const sec = document.getElementById('expSection');
+  sec.style.display = 'block';
+
+  if (!ps.length) {
+    sec.innerHTML = `<div class="exp-section">
+      <div class="exp-header">
+        <div class="exp-title">${MONTHS[m-1]} 출시 제품</div>
+        <button class="btn btn-primary btn-sm" onclick="openAddModal(${m})">+ 제품 추가</button>
+      </div>
+      <div class="empty"><div class="empty-ico">📭</div><div class="empty-txt">이 달에 등록된 제품이 없습니다</div>
+        <button class="btn btn-primary" onclick="openAddModal(${m})">+ 첫 제품 추가</button></div></div>`;
+    return;
+  }
+
+  const cards = ps.map(p => {
+    const img = p.image
+      ? `<img class="prod-img" src="${p.image}" alt="">`
+      : `<div class="prod-img-ph">📦</div>`;
+    return `<div class="prod-card" onclick="openDetail('${p.id}')">
+      ${img}
+      <div class="prod-body">
+        <div class="prod-ip">${p.ip||'—'}</div>
+        <div class="prod-name">${p.name||'(이름 없음)'}</div>
+        <div class="prod-stats">
+          <div class="prod-stat"><div class="ps-lbl">SKU</div><div class="ps-val">${p.sku?Number(p.sku).toLocaleString():'—'}</div></div>
+          <div class="prod-stat"><div class="ps-lbl">수량</div><div class="ps-val">${p.qty?Number(p.qty).toLocaleString():'—'}</div></div>
+          <div class="prod-stat"><div class="ps-lbl">공급율</div><div class="ps-val">${p.gonggeup?p.gonggeup+'%':'—'}</div></div>
+        </div>
+        <div style="margin-top:7px;font-size:11px;font-weight:700;color:var(--accent)">${p.sales?fmt(Number(p.sales))+'원 (부가세별도)':''}</div>
+        ${p.remark?`<div class="prod-remark">${p.remark}</div>`:''}
+      </div>
+      <div class="prod-actions" onclick="event.stopPropagation()">
+        <button class="btn btn-ghost btn-xs" onclick="openEditModal('${p.id}')">수정</button>
+        <button class="btn btn-danger btn-xs" onclick="delProduct('${p.id}')">삭제</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  sec.innerHTML = `<div class="exp-section">
+    <div class="exp-header">
+      <div class="exp-title">${MONTHS[m-1]} 출시 제품 <span style="font-weight:400;font-size:14px;color:var(--muted)">(${ps.length}개)</span></div>
+      <button class="btn btn-primary btn-sm" onclick="openAddModal(${m})">+ 제품 추가</button>
+    </div>
+    <div class="prod-grid">${cards}</div></div>`;
+}
+
+// ── 인터랙션 ───────────────────────────────────────
+function toggleMonth(m) {
+  selMonth = selMonth===m ? null : m;
+  renderTimeline();
+  if (selMonth!==null) {
+    renderExpanded(selMonth);
+    setTimeout(()=>document.getElementById('expSection').scrollIntoView({behavior:'smooth',block:'nearest'}),80);
+  } else {
+    document.getElementById('expSection').style.display='none';
+  }
+}
+
+function changeYear(d) {
+  year += d;
+  selMonth = null;
+  document.getElementById('yearNum').textContent   = 'FY ' + year;
+  document.getElementById('yearRange').textContent = year+'. 04 ~ '+(year+1)+'. 03';
+  document.getElementById('expSection').style.display = 'none';
+  startListener();
+}
+
+// ── 폼 모달 ───────────────────────────────────────
+function openAddModal(m) {
+  resetForm();
+  document.getElementById('fmTitle').textContent = '제품 추가';
+  document.getElementById('fmId').value = '';
+  if (m) document.getElementById('fmMonth').value = m;
+  document.getElementById('fmOverlay').classList.add('open');
+}
+
+function openEditModal(id) {
+  const p = yd().find(x=>x.id===id);
+  if (!p) return;
+  resetForm();
+  document.getElementById('fmTitle').textContent  = '제품 수정';
+  document.getElementById('fmId').value           = id;
+  document.getElementById('fmMonth').value        = p.month;
+  document.getElementById('fmIP').value           = p.ip       || '';
+  document.getElementById('fmName').value         = p.name     || '';
+  document.getElementById('fmSku').value          = p.sku      || '';
+  document.getElementById('fmQty').value          = p.qty      || '';
+  document.getElementById('fmGonggeup').value     = p.gonggeup || '';
+  document.getElementById('fmSales').value        = p.sales    || '';
+  document.getElementById('fmRemark').value       = p.remark   || '';
+  if (p.image) { imgB64=p.image; showPreview(p.image); }
+  document.getElementById('fmOverlay').classList.add('open');
+}
+
+function closeFm() { document.getElementById('fmOverlay').classList.remove('open'); }
+
+function resetForm() {
+  ['fmIP','fmName','fmSku','fmQty','fmGonggeup','fmSales','fmRemark']
+    .forEach(id => document.getElementById(id).value='');
+  imgB64=null;
+  document.getElementById('imgPreview').style.display='none';
+  document.getElementById('imgPreview').src='';
+  document.getElementById('imgPh').style.display='block';
+  document.getElementById('imgRemove').classList.remove('vis');
+  document.getElementById('imgInput').value='';
+}
+
+function handleImg(e) {
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      const max=500; let w=img.width,h=img.height;
+      if(w>max||h>max){if(w>h){h=h*max/w;w=max;}else{w=w*max/h;h=max;}}
+      canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      imgB64=canvas.toDataURL('image/jpeg',0.75);
+      showPreview(imgB64);
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function showPreview(src) {
+  document.getElementById('imgPreview').src=src;
+  document.getElementById('imgPreview').style.display='block';
+  document.getElementById('imgPh').style.display='none';
+  document.getElementById('imgRemove').classList.add('vis');
+}
+
+function removeImg(e) {
+  e.stopPropagation(); imgB64=null;
+  document.getElementById('imgPreview').style.display='none';
+  document.getElementById('imgPreview').src='';
+  document.getElementById('imgPh').style.display='block';
+  document.getElementById('imgRemove').classList.remove('vis');
+  document.getElementById('imgInput').value='';
+}
+
+async function saveProduct() {
+  const id   = document.getElementById('fmId').value;
+  const m    = parseInt(document.getElementById('fmMonth').value);
+  const orig = id ? yd().find(p=>p.id===id) : null;
+  const prod = {
+    id      : id || uid(),
+    year    : year,
+    month   : m,
+    ip      : document.getElementById('fmIP').value.trim(),
+    name    : document.getElementById('fmName').value.trim(),
+    image   : imgB64!==null ? imgB64 : (orig?orig.image||null:null),
+    sku     : document.getElementById('fmSku').value,
+    qty     : document.getElementById('fmQty').value,
+    gonggeup: document.getElementById('fmGonggeup').value,
+    sales   : document.getElementById('fmSales').value,
+    remark  : document.getElementById('fmRemark').value.trim(),
+  };
+  try {
+    toast('저장 중...');
+    await fsdb.collection('products').doc(prod.id).set(prod);
+    closeFm();
+    selMonth = m;
+    toast('✓ 저장되었습니다');
+    setTimeout(()=>document.getElementById('expSection').scrollIntoView({behavior:'smooth',block:'nearest'}),300);
+  } catch(e) { alert('저장 실패: '+e.message); }
+}
+
+async function delProduct(id) {
+  if (!confirm('이 제품을 삭제하시겠습니까?')) return;
+  try {
+    await fsdb.collection('products').doc(id).delete();
+    toast('🗑️ 삭제되었습니다');
+  } catch(e) { alert('삭제 실패: '+e.message); }
+}
+
+// ── 상세 모달 ─────────────────────────────────────
+function openDetail(id) {
+  const p=yd().find(x=>x.id===id); if(!p) return;
+  document.getElementById('dmTitle').textContent = p.name||'제품 상세';
+  const imgH = p.image
+    ? `<img class="det-img" src="${p.image}" alt="">`
+    : `<div style="font-size:52px;text-align:center;margin-bottom:18px">📦</div>`;
+  document.getElementById('dmBody').innerHTML=`
+    ${imgH}
+    <div class="det-grid">
+      <div class="det-item"><div class="det-lbl">IP</div><div class="det-val">${p.ip||'—'}</div></div>
+      <div class="det-item"><div class="det-lbl">제품명</div><div class="det-val">${p.name||'—'}</div></div>
+      <div class="det-item"><div class="det-lbl">SKU</div><div class="det-val">${p.sku?Number(p.sku).toLocaleString():'—'}</div></div>
+      <div class="det-item"><div class="det-lbl">수량</div><div class="det-val">${p.qty?Number(p.qty).toLocaleString():'—'}</div></div>
+      <div class="det-item"><div class="det-lbl">공급율</div><div class="det-val">${p.gonggeup?p.gonggeup+'%':'—'}</div></div>
+      <div class="det-item"><div class="det-lbl">매출볼륨 (부가세별도)</div><div class="det-val">${p.sales?fmt(Number(p.sales))+'원':'—'}</div></div>
+    </div>
+    <div class="det-rem"><div class="det-lbl">Remark</div><div class="det-rem-txt">${p.remark||'—'}</div></div>`;
+  document.getElementById('dmEdit').onclick=()=>{closeDm();openEditModal(id);};
+  document.getElementById('dmDel').onclick =()=>{closeDm();delProduct(id);};
+  document.getElementById('dmOverlay').classList.add('open');
+}
+function closeDm() { document.getElementById('dmOverlay').classList.remove('open'); }
+
+// ── 내보내기 / 가져오기 ───────────────────────────
+function exportData() {
+  const blob=new Blob([JSON.stringify({year,products},null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`LFSQ_FY${year}_dashboard.json`;
+  a.click();
+}
+
+async function importData(e) {
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=async ev=>{
+    try {
+      const data=JSON.parse(ev.target.result);
+      const list=data.products||data;
+      if(!Array.isArray(list)) throw new Error('형식 오류');
+      const batch=fsdb.batch();
+      list.forEach(p=>{
+        if(!p.id) p.id=uid();
+        p.year=p.year||year;
+        batch.set(fsdb.collection('products').doc(p.id),p);
+      });
+      await batch.commit();
+      toast('✓ 데이터를 성공적으로 가져왔습니다');
+    } catch(err) { alert('파일 형식이 올바르지 않습니다: '+err.message); }
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
+
+// ── 시작 ──────────────────────────────────────────
+startListener();
+</script>
+</body>
+</html>
